@@ -97,5 +97,10 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserResponse::class);
     }
+
+    public function breathingExercises()
+{
+    return $this->hasMany(BreathingExercise::class);
+}
     
 }

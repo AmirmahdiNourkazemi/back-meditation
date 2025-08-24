@@ -3,7 +3,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Socialite\Facades\Socialite;
-
+use App\Http\Controllers\BreathingExerciseController;
 use App\Http\Controllers\PackageNameController;
 use App\Http\Controllers\ProductController;
 
@@ -37,5 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{name}/products/{id}/subscribe', [ProductController::class, 'subscribe']);
     });
 
+    Route::post('breathing-exercises', [BreathingExerciseController::class, 'store']);
+    Route::get('profile', [BreathingExerciseController::class, 'profile']);
    
   });
