@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Http;
 class UserController extends Controller
 {
     public function login(Request $request)
@@ -71,7 +72,10 @@ class UserController extends Controller
             'mobile' => ['string', new MobileNumber, 'nullable', 'unique:users', 'required_without:email'], 
         ]);
 
-        $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
+            if(isset($data['mobile'])){
+                $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
+            }
+
         if (!isset($data['password'])) {
             $data['password'] = Hash::make(config('app.default_password')); // Hash default password
         } else {
@@ -94,7 +98,8 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'mobile' => ['string', new MobileNumber, 'required'],
-            'package_name' => 'string|required'
+            'package_name' => 'string|required',
+             'fcm_token' => 'string',
         ]);
 
         if (!$packageName = PackageName::where('name', $data['package_name'])->first()) {
@@ -130,7 +135,12 @@ class UserController extends Controller
 
 
         if (!$user->packageNames()->where('package_names.id', $packageName->id)->exists()) {
-            $user->packageNames()->attach($packageName->id, ['tries' => $packageName->tries]);
+            $user->packageNames()->attach($packageName->id, ['tries' => $packageName->tries,
+        
+                'fcm_token' => $data['fcm_token'] ?? null,]);
+        } else {
+            $user->packageNames()->updateExistingPivot($packageName->id,[
+                'fcm_token' => $data['fcm_token'] ?? null,]);
         }
 
         return response()->json([
@@ -164,7 +174,7 @@ class UserController extends Controller
         if ($user->is_admin) {
             $token = $user->createToken('token', ['admin'])->plainTextToken;
         } else {
-            $token = $user->createToken('token', ['admin'])->plainTextToken;
+            $token = $user->createToken('token', ['user'])->plainTextToken;
         }
 
         return response()->json([
@@ -285,5 +295,49 @@ class UserController extends Controller
     public function oauthCallback(Request $request)
     {
         return dd(Socialite::driver('google')->stateless()->user());
-    }   
+    } 
+    
+       public function googleLogin(Request $request)
+    {
+        $data = $request->validate([
+            'access_token' => 'string|required',
+            'package_name' => 'string|required',
+        ]);
+
+        if (!$packageName = PackageName::where('name', $data['package_name'])->first()) {
+            return response()->json([
+                'message' => 'package name not found'
+            ], 404);
+        }
+
+        $response = Http::get("https://www.googleapis.com/oauth2/v3/userinfo", [
+            'access_token' => $data['access_token']
+        ])->json();
+
+        if (!isset($response['email'])) {
+            return response()->json([
+                'message' => 'invalid token'
+            ], 400);
+        }
+        if (!$user = User::where('email', $response['email'])->first()) {
+            $user = User::create([
+                'email' => $response['email'],
+                'password' => config('app.default_password'),
+            ]);
+
+            if (!$user->packageNames()->where('package_names.id', $packageName->id)->exists()) {
+                $user->packageNames()->attach($packageName->id, [
+                    'tries' => $packageName->tries,
+                    'source' => $data['source'] ?? 0,
+                ]);
+            }
+        }
+
+        $token = $user->createToken('token', ['user'])->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
 }

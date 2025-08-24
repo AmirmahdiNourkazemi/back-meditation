@@ -77,7 +77,7 @@ class User extends Authenticatable
 
     public function packageNames()
     {
-        return $this->belongsToMany(PackageName::class, 'user_package_name')->withPivot(['id', 'tries'])->withTimestamps();
+        return $this->belongsToMany(PackageName::class, 'user_package_name')->withPivot(['id', 'tries','fcm_token'])->withTimestamps();
     }
 
     public function products()

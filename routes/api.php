@@ -10,12 +10,13 @@ use App\Http\Controllers\ProductController;
 
 Route::get('package-names/{name}/products', [ProductController::class, 'index']);
 Route::prefix('auth')->controller(UserController::class)->group(function () {
-    Route::middleware(['throttle:3,1', 'auto-ban'])->post('login-otp', 'loginOTP');
+    Route::middleware(['throttle:3,1'])->post('login-otp', 'loginOTP');
     Route::post('check-otp', 'checkOTP');
 
     Route::post('login', 'login');
     Route::post('register', 'register');
 
+    Route::post('/login-google', 'googleLogin');
     Route::get('/oauth/callback', 'oauthCallback');
     Route::middleware('auth:sanctum')->group(function () {
         Route::put('logout', 'logout');
