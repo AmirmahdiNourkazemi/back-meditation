@@ -6,7 +6,7 @@ use Laravel\Socialite\Facades\Socialite;
 use App\Http\Controllers\BreathingExerciseController;
 use App\Http\Controllers\PackageNameController;
 use App\Http\Controllers\ProductController;
-
+use App\Http\Controllers\BreathingTemplate;
 
 Route::get('package-names/{name}/products', [ProductController::class, 'index']);
 Route::prefix('auth')->controller(UserController::class)->group(function () {
@@ -39,5 +39,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('breathing-exercises', [BreathingExerciseController::class, 'store']);
     Route::get('profile', [BreathingExerciseController::class, 'profile']);
-   
+
+    // ------------------------------------------------
+    Route::post('breathing-templates', [BreathingExerciseController::class, 'createTemplate']);
+    Route::get('breathing-templates', [BreathingExerciseController::class, 'getTemplates']);
+    Route::post('breathing-complete', [BreathingExerciseController::class, 'completeSession']);
+    Route::get('profile', [BreathingExerciseController::class, 'profile']);
+    Route::put('breathing-templates/{id}', [BreathingExerciseController::class, 'updateTemplate']);
+    Route::delete('breathing-templates/{id}', [BreathingExerciseController::class, 'deleteTemplate']);
+    Route::get('user-templates', [BreathingExerciseController::class, 'getUserTemplates']);
   });
