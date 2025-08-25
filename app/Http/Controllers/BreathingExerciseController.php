@@ -26,7 +26,9 @@ class BreathingExerciseController extends Controller
         ]);
 
         // Give XP (e.g., +10 per session)
-        $user->increment('xp', 10);
+        if ($data['created_at'] == null) {
+            $user->increment('xp', 10);
+        }
 
         return response()->json([
             'message' => 'Exercise saved',
