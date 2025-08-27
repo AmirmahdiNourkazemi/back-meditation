@@ -26,9 +26,12 @@ class MoodController extends Controller
                 'mood_id' => $data['mood_id'],
             ]
         );
-
+      
+            $user->increment('xp', 10);
+      
         return response()->json([
             'message' => 'Mood saved successfully',
+            'xp' => $user->xp,
             'mood' => $mood->load('mood')
         ]);
     }
