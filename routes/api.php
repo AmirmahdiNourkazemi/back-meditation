@@ -12,7 +12,7 @@ Route::get('package-names/{name}/products', [ProductController::class, 'index'])
 Route::prefix('auth')->controller(UserController::class)->group(function () {
     Route::middleware(['throttle:3,1'])->post('login-otp', 'loginOTP');
     Route::post('check-otp', 'checkOTP');
-
+    Route::post('verify-email-code','verifyEmailCode');
     Route::post('login', 'login');
     Route::post('register', 'register');
 
@@ -30,21 +30,29 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('abilities:admin')->post('/{name}', 'update');
 
         Route::put('/{name}/try', [UserController::class, 'try']);
-
+        
         Route::middleware('abilities:admin')->post('/{name}/products', [ProductController::class, 'store']);
         Route::middleware('abilities:admin')->patch('/{name}/products/{id}', [ProductController::class, 'update']);
         Route::middleware('abilities:admin')->delete('/{name}/products/{id}', [ProductController::class, 'delete']);
         Route::put('/{name}/products/{id}/subscribe', [ProductController::class, 'subscribe']);
-    });
 
-    Route::post('breathing-exercises', [BreathingExerciseController::class, 'store']);
-    Route::get('profile', [BreathingExerciseController::class, 'profile']);
+
+    
+      
+    });
+        // --------- user profile 
+   Route::post('/profile', [UserController::class, 'updateProfile']);
+   Route::get('/profile', [UserController::class, 'profile']);
+
+
+    // Route::post('breathing-exercises', [BreathingExerciseController::class, 'store']);
+    // Route::get('profile', [BreathingExerciseController::class, 'profile']);
 
     // ------------------------------------------------
     Route::post('breathing-templates', [BreathingExerciseController::class, 'createTemplate']);
     Route::get('breathing-templates', [BreathingExerciseController::class, 'getTemplates']);
     Route::post('breathing-complete', [BreathingExerciseController::class, 'completeSession']);
-    Route::get('profile', [BreathingExerciseController::class, 'profile']);
+    // Route::get('profile', [BreathingExerciseController::class, 'profile']);
     Route::put('breathing-templates/{id}', [BreathingExerciseController::class, 'updateTemplate']);
     Route::delete('breathing-templates/{id}', [BreathingExerciseController::class, 'deleteTemplate']);
     Route::get('user-templates', [BreathingExerciseController::class, 'getUserTemplates']);

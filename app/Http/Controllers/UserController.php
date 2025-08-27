@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Http;
+use App\Models\BreathingExercise;
+use App\Models\BreathingTemplate;
+use App\Models\UserBreathingSession;
 class UserController extends Controller
 {
     public function login(Request $request)
@@ -72,27 +75,69 @@ class UserController extends Controller
             'mobile' => ['string', new MobileNumber, 'nullable', 'unique:users', 'required_without:email'], 
         ]);
 
-            if(isset($data['mobile'])){
-                $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
-            }
+        if(isset($data['mobile'])){
+            $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
+        }
 
         if (!isset($data['password'])) {
-            $data['password'] = Hash::make(config('app.default_password')); // Hash default password
+            $data['password'] = Hash::make(config('app.default_password'));
         } else {
-            $data['password'] = Hash::make($data['password']); // Hash provided password
+            $data['password'] = Hash::make($data['password']);
         }
-        // return response()->json([
-        //     "salam"
-        // ]);
+
         $user = User::create($data);
 
-        $token = $user->createToken('token', ['user'])->plainTextToken;
+        // Generate verification code
+        $code = rand(100000, 999999);
+
+        // Save verification record
+        \DB::table('email_verifications')->insert([
+            'user_id' => $user->id,
+            'code' => $code,
+            'expires_at' => now()->addMinutes(15),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Send verification email
+        \Mail::to($user->email)->send(new \App\Mail\VerifyEmailCodeMail($code));
 
         return response()->json([
+            'message' => 'User registered successfully. Verification code sent to email.',
             'user' => $user,
-            'token' => $token
         ]);
     }
+
+public function verifyEmailCode(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'code' => 'required|string',
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+    if (!$user) {
+        return response()->json(['message' => 'User not found'], 404);
+    }
+
+    $record = \DB::table('email_verifications')
+        ->where('user_id', $user->id)
+        ->where('code', $request->code)
+        ->where('expires_at', '>', now())
+        ->first();
+
+    if (!$record) {
+        return response()->json(['message' => 'Invalid or expired code'], 400);
+    }
+
+    // Mark email as verified
+    $user->update(['email_verified_at' => now()]);
+
+    // Delete verification record
+    \DB::table('email_verifications')->where('id', $record->id)->delete();
+
+    return response()->json(['message' => 'Email verified successfully']);
+}
 
     public function loginOTP(Request $request)
     {
@@ -223,6 +268,24 @@ class UserController extends Controller
         return response()->json([
             'user' => $user,
             'message' => 'user updated'
+        ]);
+    }
+
+      public function profile()
+    {
+        $user = auth()->user();
+        $templates = BreathingTemplate::where('user_id', $user->id)->get();
+        $sessions = UserBreathingSession::with('template')->where('user_id', $user->id)->get();
+
+        return response()->json([
+            'email' => $user->email,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'mobile'=> $user->mobile,
+            'birthday' => $user ->birthday,
+            'xp' => $user->xp,
+            'templates' => $templates,
+            'sessions' => $sessions
         ]);
     }
     public function status(Request $request)

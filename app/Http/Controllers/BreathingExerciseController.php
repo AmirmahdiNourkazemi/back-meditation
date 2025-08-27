@@ -118,18 +118,5 @@ class BreathingExerciseController extends Controller
         return response()->json(['message' => 'Session completed', 'session' => $session]);
     }
 
-    public function profile()
-    {
-        $user = auth()->user();
-        $templates = BreathingTemplate::where('user_id', $user->id)->get();
-        $sessions = UserBreathingSession::with('template')->where('user_id', $user->id)->get();
-
-        return response()->json([
-            'email' => $user->email,
-            'name' => $user->first_name . ' ' . $user->last_name,
-            'xp' => $user->xp,
-            'templates' => $templates,
-            'sessions' => $sessions
-        ]);
-    }
+  
 }
