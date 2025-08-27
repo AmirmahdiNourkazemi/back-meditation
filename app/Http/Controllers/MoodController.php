@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Mood;
+use App\Models\UserMood;
+use Illuminate\Http\Request;
+
+class MoodController extends Controller
+{
+    // Store today's mood
+    public function storeUserMood(Request $request)
+    {
+        $data = $request->validate([
+            'mood_id' => 'required|exists:moods,id',
+        ]);
+
+        $user = auth()->user();
+
+        $mood = UserMood::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'date' => now()->toDateString(),
+            ],
+            [
+                'mood_id' => $data['mood_id'],
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Mood saved successfully',
+            'mood' => $mood->load('mood')
+        ]);
+    }
+
+    // Get list of all moods user has set
+    public function getUserMoods()
+    {
+        $user = auth()->user();
+
+        $moods = UserMood::where('user_id', $user->id)
+            ->with('mood')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json($moods);
+    }
+
+    public function getAllMoods()
+    {
+        $moods = Mood::all();
+        return response()->json($moods);
+    }
+}

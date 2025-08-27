@@ -7,6 +7,7 @@ use App\Http\Controllers\BreathingExerciseController;
 use App\Http\Controllers\PackageNameController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\BreathingTemplate;
+use App\Http\Controllers\MoodController;
 
 Route::get('package-names/{name}/products', [ProductController::class, 'index']);
 Route::prefix('auth')->controller(UserController::class)->group(function () {
@@ -45,6 +46,15 @@ Route::middleware('auth:sanctum')->group(function () {
    Route::get('/profile', [UserController::class, 'profile']);
 
 
+    ///--  mood routes
+
+     Route::post('/moods/today', [MoodController::class, 'storeUserMood']);
+     Route::get('/moods/history', [MoodController::class, 'getUserMoods']);
+    
+
+    // --------- get moods  
+    Route::get('/moods', [MoodController::class, 'getAllMoods']);
+    
     // Route::post('breathing-exercises', [BreathingExerciseController::class, 'store']);
     // Route::get('profile', [BreathingExerciseController::class, 'profile']);
 
