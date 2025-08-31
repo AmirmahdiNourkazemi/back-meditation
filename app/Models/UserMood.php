@@ -16,4 +16,8 @@ class UserMood extends Model
      {
          return $this->belongsTo(Mood::class);
      }
+     public function notes()
+    {
+        return $this->morphMany(Note::class, 'noteable');
+    }
 }

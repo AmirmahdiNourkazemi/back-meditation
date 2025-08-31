@@ -13,11 +13,12 @@ class MoodController extends Controller
     {
         $data = $request->validate([
             'mood_id' => 'required|exists:moods,id',
+             'note'    => 'nullable|string'
         ]);
 
         $user = auth()->user();
 
-        $mood = UserMood::updateOrCreate(
+        $moodEntry = UserMood::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'date' => now()->toDateString(),
@@ -26,28 +27,35 @@ class MoodController extends Controller
                 'mood_id' => $data['mood_id'],
             ]
         );
+          // If a note is provided, create or update it
+        if (!empty($data['note'])) {
+            $moodEntry->notes()->updateOrCreate(
+                ['user_id' => $user->id],
+                ['content' => $data['note']]
+            );
+        }
       
             $user->increment('xp', 10);
       
         return response()->json([
             'message' => 'Mood saved successfully',
             'xp' => $user->xp,
-            'mood' => $mood->load('mood')
+            'mood'    => $moodEntry->load(['mood', 'notes'])
         ]);
     }
 
     // Get list of all moods user has set
     public function getUserMoods()
-    {
-        $user = auth()->user();
+        {
+            $user = auth()->user();
 
-        $moods = UserMood::where('user_id', $user->id)
-            ->with('mood')
-            ->orderBy('date', 'desc')
-            ->get();
+            $moods = UserMood::where('user_id', $user->id)
+                ->with(['mood', 'notes'])
+                ->orderBy('date', 'desc')
+                ->get();
 
-        return response()->json($moods);
-    }
+            return response()->json($moods);
+        }
 
     public function getAllMoods()
     {

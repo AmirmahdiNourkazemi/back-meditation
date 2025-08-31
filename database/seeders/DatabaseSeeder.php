@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
 {
-    $this->call(MoodSeeder::class);
+    $this->call(BreathingTemplateSeeder::class);
 }
     /**
      * Seed the application's database.
