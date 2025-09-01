@@ -35,14 +35,14 @@ class UserController extends Controller
     }
 
     $user = User::where($authType, $data['auth'])->first();
-    return response()->json([
-        'user' => $user,
-        // 'token' => $token,
-        'hash'=> trim($data['password']),
-        'password' => $user ? $user->password : null,
-        'check' => $user ? Hash::check(trim($data['password']), $user->password) : null,
+    // return response()->json([
+    //     'user' => $user,
+    //     // 'token' => $token,
+    //     'hash'=> trim($data['password']),
+    //     'password' => $user ? $user->password : null,
+    //     'check' => $user ? Hash::check(trim($data['password']), $user->password) : null,
 
-    ]);
+    // ]);
     if (!$user || !Hash::check(trim($data['password']), $user->password)) {
         return response()->json(['message' => 'wrong credentials'], 404);
     }
@@ -77,7 +77,7 @@ class UserController extends Controller
         return response()->json(['message' => 'Email already exists'], 400);
     }
     $pass = $data['password'] ?? null;
-    $data['password'] = isset($data['password']) ? Hash::make($data['password']) : Hash::make(config('app.default_password'));
+    $data['password'] = isset($data['password']) ? $data['password'] : Hash::make(Str::random(8));
 
     $user = User::create($data);
 
@@ -96,9 +96,6 @@ class UserController extends Controller
     return response()->json([
         'message' => 'User registered successfully.',
         'user' => $user,
-        'hash' => Hash::make($data['password']),
-        'plain_password' => $pass,
-        'check' => isset($pass) ? Hash::check($pass, $data['password']) : null,
     ]);
 }
 
