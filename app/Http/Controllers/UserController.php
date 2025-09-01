@@ -22,75 +22,67 @@ use App\Models\BreathingTemplate;
 use App\Models\UserBreathingSession;
 class UserController extends Controller
 {
-    public function login(Request $request)
-    {
-        $data = $request->validate([
-            'auth' => 'string|required',
-            'password' => 'string|required'
-        ]);
+   public function login(Request $request)
+{
+    $data = $request->validate([
+        'auth' => 'string|required',
+        'password' => 'string|required'
+    ]);
 
-        if (filter_var($data['auth'], FILTER_VALIDATE_EMAIL)) {
-            $authType = 'email';
-        } elseif (MobileNumberHelper::checkMobileNumber($data['auth'])) {
-            $authType = 'mobile';
-            $data['auth'] = MobileNumberHelper::formatMobile($data['auth']);
-        } else {
-            return response()->json([
-                'message' => 'wrong credentials'
-            ], 404);
-        }
-
-        if (!$user = User::where($authType, $data['auth'])->first()) {
-            return response()->json([
-                'message' => 'wrong credentials'
-            ], 404);
-        }
-        
-        if (!Hash::check($data['password'], $user->password)) {
-            return response()->json([
-                'message' => 'wrong credentials'
-            ], 404);
-        }
-
-        $token = '';
-        if ($user->is_admin) {
-            $token = $user->createToken('token', ['admin'])->plainTextToken;
-        } else {
-            $token = $user->createToken('token', ['user'])->plainTextToken;
-        }
-
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-        ]);
+    $authType = filter_var($data['auth'], FILTER_VALIDATE_EMAIL) ? 'email' : 'mobile';
+    if ($authType == 'mobile') {
+        $data['auth'] = MobileNumberHelper::formatMobile($data['auth']);
     }
 
-    public function register(Request $request)
-    {
-        $data = $request->validate([
-            'first_name' => 'string',
-            'last_name' => 'string',
-            'email' => 'email|unique:users|required_without:mobile',
-            'password' => 'string|nullable|required_with:email',
-            'mobile' => ['string', new MobileNumber, 'nullable', 'unique:users', 'required_without:email'], 
-        ]);
+    $user = User::where($authType, $data['auth'])->first();
+    return response()->json([
+        'user' => $user,
+        // 'token' => $token,
+        'hash'=> trim($data['password']),
+        'password' => $user ? $user->password : null,
+        'check' => $user ? Hash::check(trim($data['password']), $user->password) : null,
 
-        if(isset($data['mobile'])){
-            $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
+    ]);
+    if (!$user || !Hash::check(trim($data['password']), $user->password)) {
+        return response()->json(['message' => 'wrong credentials'], 404);
+    }
+
+    $token = $user->createToken('token', $user->is_admin ? ['admin'] : ['user'])->plainTextToken;
+
+    return response()->json([
+        'user' => $user,
+        'token' => $token,
+    ]);
+}
+
+
+ public function register(Request $request)
+{
+    $data = $request->validate([
+        'first_name' => 'string|nullable',
+        'last_name' => 'string|nullable',
+        'email' => 'email|required_without:mobile',
+        'password' => 'string|nullable|required_with:email',
+        'mobile' => ['string', new MobileNumber, 'nullable', 'required_without:email'],
+    ]);
+
+    if (isset($data['mobile'])) {
+        $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
+        if (User::where('mobile', $data['mobile'])->exists()) {
+            return response()->json(['message' => 'Mobile number already exists'], 400);
         }
+    }
 
-        if (!isset($data['password'])) {
-            $data['password'] = Hash::make(config('app.default_password'));
-        } else {
-            $data['password'] = Hash::make($data['password']);
-        }
+    if (isset($data['email']) && User::where('email', $data['email'])->exists()) {
+        return response()->json(['message' => 'Email already exists'], 400);
+    }
+    $pass = $data['password'] ?? null;
+    $data['password'] = isset($data['password']) ? Hash::make($data['password']) : Hash::make(config('app.default_password'));
 
-        $user = User::create($data);
+    $user = User::create($data);
 
-        // Generate verification code
+    if (isset($data['email'])) {
         $code = rand(100000, 999999);
-
-        // Save verification record
         \DB::table('email_verifications')->insert([
             'user_id' => $user->id,
             'code' => $code,
@@ -98,15 +90,19 @@ class UserController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        // Send verification email
         \Mail::to($user->email)->send(new \App\Mail\VerifyEmailCodeMail($code));
-
-        return response()->json([
-            'message' => 'User registered successfully. Verification code sent to email.',
-            'user' => $user,
-        ]);
     }
+
+    return response()->json([
+        'message' => 'User registered successfully.',
+        'user' => $user,
+        'hash' => Hash::make($data['password']),
+        'plain_password' => $pass,
+        'check' => isset($pass) ? Hash::check($pass, $data['password']) : null,
+    ]);
+}
+
+
 
 public function verifyEmailCode(Request $request)
 {

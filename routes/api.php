@@ -9,6 +9,19 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\BreathingTemplate;
 use App\Http\Controllers\MoodController;
 use App\Http\Controllers\WorryController;
+use Illuminate\Support\Facades\Hash;
+
+Route::get('/test-hash', function() {
+    $plain = 'amnk1380';
+    $hash = Hash::make($plain);
+
+    return [
+        'plain' => $plain,
+        'hash' => $hash,
+        'check' => Hash::check($plain, $hash), // should be true
+    ];
+});
+
 
 Route::get('package-names/{name}/products', [ProductController::class, 'index']);
 Route::prefix('auth')->controller(UserController::class)->group(function () {
