@@ -22,12 +22,18 @@ use App\Models\BreathingTemplate;
 use App\Models\UserBreathingSession;
 class UserController extends Controller
 {
-   public function login(Request $request)
+public function login(Request $request)
 {
     $data = $request->validate([
         'auth' => 'string|required',
-        'password' => 'string|required'
+        'password' => 'string|required',
+        'package_name' => 'string|required',
+        'fcm_token' => 'string|nullable'
     ]);
+
+    if (!$packageName = PackageName::where('name', $data['package_name'])->first()) {
+        return response()->json(['message' => 'package name not found'], 404);
+    }
 
     $authType = filter_var($data['auth'], FILTER_VALIDATE_EMAIL) ? 'email' : 'mobile';
     if ($authType == 'mobile') {
@@ -35,16 +41,21 @@ class UserController extends Controller
     }
 
     $user = User::where($authType, $data['auth'])->first();
-    // return response()->json([
-    //     'user' => $user,
-    //     // 'token' => $token,
-    //     'hash'=> trim($data['password']),
-    //     'password' => $user ? $user->password : null,
-    //     'check' => $user ? Hash::check(trim($data['password']), $user->password) : null,
 
-    // ]);
     if (!$user || !Hash::check(trim($data['password']), $user->password)) {
         return response()->json(['message' => 'wrong credentials'], 404);
+    }
+
+    // Attach package if not exists
+    if (!$user->packageNames()->where('package_names.id', $packageName->id)->exists()) {
+        $user->packageNames()->attach($packageName->id, [
+            'tries' => $packageName->tries,
+            'fcm_token' => $data['fcm_token'] ?? null,
+        ]);
+    } else {
+        $user->packageNames()->updateExistingPivot($packageName->id, [
+            'fcm_token' => $data['fcm_token'] ?? null,
+        ]);
     }
 
     $token = $user->createToken('token', $user->is_admin ? ['admin'] : ['user'])->plainTextToken;
@@ -55,8 +66,7 @@ class UserController extends Controller
     ]);
 }
 
-
- public function register(Request $request)
+public function register(Request $request)
 {
     $data = $request->validate([
         'first_name' => 'string|nullable',
@@ -64,7 +74,9 @@ class UserController extends Controller
         'email' => 'email|required_without:mobile',
         'password' => 'string|nullable|required_with:email',
         'mobile' => ['string', new MobileNumber, 'nullable', 'required_without:email'],
+        'fcm_token' => 'string|nullable'
     ]);
+
 
     if (isset($data['mobile'])) {
         $data['mobile'] = MobileNumberHelper::formatMobile($data['mobile']);
@@ -76,11 +88,11 @@ class UserController extends Controller
     if (isset($data['email']) && User::where('email', $data['email'])->exists()) {
         return response()->json(['message' => 'Email already exists'], 400);
     }
-    $pass = $data['password'] ?? null;
-    $data['password'] = isset($data['password']) ? $data['password'] : Hash::make(Str::random(8));
 
+    $data['password'] = $data['password'] ?? Hash::make(Str::random(8));
     $user = User::create($data);
 
+    // Send email verification if email exists
     if (isset($data['email'])) {
         $code = rand(100000, 999999);
         \DB::table('email_verifications')->insert([
@@ -98,6 +110,7 @@ class UserController extends Controller
         'user' => $user,
     ]);
 }
+
 
 
 
