@@ -141,8 +141,8 @@ public function verifyEmailCode(Request $request)
 
     // Delete verification record
     \DB::table('email_verifications')->where('id', $record->id)->delete();
-
-    return response()->json(['message' => 'Email verified successfully']);
+    $token = $user->createToken('token', $user->is_admin ? ['admin'] : ['user'])->plainTextToken;
+    return response()->json(['message' => 'Email verified successfully', 'token' => $token]);
 }
 
     public function loginOTP(Request $request)
