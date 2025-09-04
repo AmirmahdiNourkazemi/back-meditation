@@ -76,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('breathing-templates/{id}', [BreathingExerciseController::class, 'updateTemplate']);
     Route::delete('breathing-templates/{id}', [BreathingExerciseController::class, 'deleteTemplate']);
     Route::get('user-templates', [BreathingExerciseController::class, 'getUserTemplates']);
+    Route::get('breathing-sessions', [BreathingExerciseController::class, 'getSessions']);
 
     /// worry box feature
     Route::prefix('worries')->controller(WorryController::class)->group(function () {

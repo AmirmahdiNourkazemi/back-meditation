@@ -8,10 +8,10 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    public function run(): void
-{
-    $this->call(BreathingTemplateSeeder::class);
-}
+//     public function run(): void
+// {
+//     $this->call(BreathingTemplateSeeder::class);
+// }
     /**
      * Seed the application's database.
      */
